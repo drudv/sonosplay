@@ -1,4 +1,5 @@
 import os
+import re
 import soco
 import socket
 import sys
@@ -9,6 +10,10 @@ from socketserver import TCPServer
 START_PORT = 9000
 END_PORT = 9999
 STREAM_PATH = '/stream.mp3'  # Sonos player wants this '.mp3' extension
+
+
+def is_url(file_or_url):
+    return re.match('^http[s]?://', file_or_url, flags=re.IGNORECASE)
 
 
 def create_handler(media_file):
@@ -78,14 +83,20 @@ class Streamer:
             raise Exception("Player %s doesn't exist" % predefined_player_name)
 
     def run(self,
-            media_file,
+            media_file_or_url,
             predefined_port=None,
             predefined_ip_addr=None,
             predefined_player_name=None):
+        player = self.get_player(predefined_player_name)
+        if is_url(media_file_or_url):
+            print('Playing %s...' % media_file_or_url)
+            player.play_uri(media_file_or_url)
+            return
+        if not os.path.isfile(media_file_or_url):
+            raise Exception("File %s doesn't exist")
         port = predefined_port or self.find_free_port()
         ip_addr = predefined_ip_addr or self.detect_ip_addr()
-        player = self.get_player(predefined_player_name)
-        Handler = create_handler(media_file=media_file)
+        Handler = create_handler(media_file=media_file_or_url)
         with HTTPServer((ip_addr, port), Handler) as httpd:
             stream_url = 'http://%s:%s%s' % (ip_addr, port, STREAM_PATH)
             print('Streaming on %s' % stream_url)
