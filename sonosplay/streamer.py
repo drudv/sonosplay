@@ -4,6 +4,7 @@ import soco
 import socket
 import sys
 import threading
+from email.header import Header
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import TCPServer
 
@@ -26,6 +27,7 @@ def create_handler(media_file):
                 try:
                     with open(media_file, 'rb') as file:
                         basename = os.path.basename(media_file)
+                        encoded_basename = Header(basename).encode()
                         stat = os.fstat(file.fileno())
                         self.send_response(200)
                         self.send_header('Content-Length', str(stat[6]))
@@ -34,7 +36,7 @@ def create_handler(media_file):
                             'audio/mpeg')
                         self.send_header(
                             'Content-Disposition',
-                            'attachment; filename="%s"' % basename)
+                            'attachment; filename="%s"' % encoded_basename)
                         self.end_headers()
                         self.wfile.write(file.read())
                 except socket.error as error:
